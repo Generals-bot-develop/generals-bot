@@ -75,7 +75,7 @@ for i in leadboard:
             "./td[5]"
             )
     leadboard2.append([color, army, land])
-array = np.zeros((500, 32, 32, 3), dtype='float32')
+array = np.zeros((3000, 32, 32, 3), dtype='float32')
 cntt = 0
 while endall:
     mapcur = (driver.execute_script("""
