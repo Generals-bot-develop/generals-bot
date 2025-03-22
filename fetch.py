@@ -75,7 +75,7 @@ for i in leadboard:
             "./td[5]"
             )
     leadboard2.append([color, army, land])
-array = np.zeros((3000, 32, 32, 3), dtype='float32')
+array = np.zeros((5000, 32, 32, 3), dtype='float32')
 cntt = 0
 while endall:
     mapcur = (driver.execute_script("""
@@ -141,5 +141,6 @@ while endall:
         array[cntt][31][person[color_text]][0] = army
         array[cntt][31][person[color_text]][1] = land
     cntt = cntt + 1
-np.save("result.npy", array)
 driver.quit()
+array.resize((cntt, 32, 32, 3))
+np.save("result.npy", array)
