@@ -1,7 +1,8 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-import time
+import numpy as np
+import sys
 
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("--disable-extensions")
@@ -47,7 +48,27 @@ for iii in element_all:
     map.append(element_hang)
 i = len(map)
 j = len(map[0])
+leadboard = driver.find_element(
+            By.XPATH,
+            "//*[@id=\"game-leaderboard\"]/tbody")
+leadboard = leadboard.find_elements(
+                By.XPATH,
+                "./*")
+person = dict()
+cnt = 0
+for i in leadboard:
+    color = i.find_element(
+            By.XPATH,
+            "./td[3]"
+            )
+    if color.text == "Player":
+        continue
+    color_text = (color.get_attribute("class").split(' ')[1])
+    person[color_text] = cnt
+    cnt = cnt + 1
+print(person)
 while endall:
+    array_cur = np.zeros((32, 32, 3), dtype='float32')
     mapcur = (driver.execute_script("""
     let list = [];
     for(var i=0;i<arguments[0].length;i++){
@@ -61,13 +82,39 @@ while endall:
         list.push(list2)
     }
     return list;""", map))
-    begin_time = time.time()
     next_step.click()
-    end_time = time.time()
-    print(end_time-begin_time)
     if ii == turn.text:
         endall = 0
     ii = turn.text
     print("Down "+ii)
-    mapall.append(mapcur)
+    numi = numj =0
+    for i in mapcur:
+        for j in i:
+            if j[0] == '':
+                j[0] = 0
+            if j[1] == ' mountain':
+                array_cur[numi][numj][0] = 0
+                array_cur[numi][numj][2] = np.inf
+            elif j[1] == '':
+                array_cur[numi][numj][0] = 0
+            elif j[1].endswith("city"):
+                array_cur[numi][numj][0] = 1
+                array_cur[numi][numj][2] = float(j[0])
+            elif j[1].endswith("general"):
+                array_cur[numi][numj][0] = 3
+                array_cur[numi][numj][2] = float(j[0])
+            else:
+                array_cur[numi][numj][0] = 2
+                array_cur[numi][numj][2] = float(j[0])
+            
+            color = person.get(j[1].split(' ')[0])
+            if color is not None:
+                array_cur[numi][numj][1] = color
+            else:
+                array_cur[numi][numj][1] = -1
+            numj = numj + 1
+        numi = numi + 1
+        numj = 0
+    np.set_printoptions(threshold=sys.maxsize)
+    print(array_cur)
 driver.quit()
