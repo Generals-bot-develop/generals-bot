@@ -2,7 +2,6 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 import numpy as np
-import sys
 
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("--disable-extensions")
@@ -56,6 +55,7 @@ leadboard = leadboard.find_elements(
                 "./*")
 person = dict()
 cnt = 0
+leadboard2 = []
 for i in leadboard:
     color = i.find_element(
             By.XPATH,
@@ -66,9 +66,18 @@ for i in leadboard:
     color_text = (color.get_attribute("class").split(' ')[1])
     person[color_text] = cnt
     cnt = cnt + 1
-print(person)
+    army = i.find_element(
+            By.XPATH,
+            "./td[4]"
+            )
+    land = i.find_element(
+            By.XPATH,
+            "./td[5]"
+            )
+    leadboard2.append([color, army, land])
+array = np.zeros((500, 32, 32, 3), dtype='float32')
+cntt = 0
 while endall:
-    array_cur = np.zeros((32, 32, 3), dtype='float32')
     mapcur = (driver.execute_script("""
     let list = [];
     for(var i=0;i<arguments[0].length;i++){
@@ -87,34 +96,50 @@ while endall:
         endall = 0
     ii = turn.text
     print("Down "+ii)
-    numi = numj =0
+    numi = numj = 0
     for i in mapcur:
         for j in i:
             if j[0] == '':
                 j[0] = 0
             if j[1] == ' mountain':
-                array_cur[numi][numj][0] = 0
-                array_cur[numi][numj][2] = np.inf
+                array[cntt][numi][numj][0] = 0
+                array[cntt][numi][numj][2] = np.inf
             elif j[1] == '':
-                array_cur[numi][numj][0] = 0
+                array[cntt][numi][numj][0] = 0
+                array[cntt][numi][numj][2] = float(j[0])
             elif j[1].endswith("city"):
-                array_cur[numi][numj][0] = 1
-                array_cur[numi][numj][2] = float(j[0])
+                array[cntt][numi][numj][0] = 1
+                array[cntt][numi][numj][2] = float(j[0])
             elif j[1].endswith("general"):
-                array_cur[numi][numj][0] = 3
-                array_cur[numi][numj][2] = float(j[0])
+                array[cntt][numi][numj][0] = 2
+                array[cntt][numi][numj][2] = float(j[0])
             else:
-                array_cur[numi][numj][0] = 2
-                array_cur[numi][numj][2] = float(j[0])
-            
+                array[cntt][numi][numj][0] = 0
+                array[cntt][numi][numj][2] = float(j[0])
             color = person.get(j[1].split(' ')[0])
             if color is not None:
-                array_cur[numi][numj][1] = color
+                array[cntt][numi][numj][1] = color
             else:
-                array_cur[numi][numj][1] = -1
+                array[cntt][numi][numj][1] = -1
             numj = numj + 1
         numi = numi + 1
         numj = 0
-    np.set_printoptions(threshold=sys.maxsize)
-    print(array_cur)
+    leadboard_cnt = (driver.execute_script("""
+    let list = [];
+    for(var i=0;i<arguments[0].length;i++){
+        let list2 = [];
+        list2.push(arguments[0][i][0].className);
+        list2.push(arguments[0][i][1].innerText);
+        list2.push(arguments[0][i][2].innerText);
+        list.push(list2);
+    }
+    return list;""", leadboard2))
+    for i in leadboard_cnt:
+        color_text = (i[0].split(' ')[1])
+        army = int(i[1])
+        land = int(i[2])
+        array[cntt][31][person[color_text]][0] = army
+        array[cntt][31][person[color_text]][1] = land
+    cntt = cntt + 1
+np.save("result.npy", array)
 driver.quit()
